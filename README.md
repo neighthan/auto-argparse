@@ -43,8 +43,8 @@ if __name__ == "__main__":
 with
 
 ```python
-from auto_argparse import parse_args_and_run
 from typing import List
+from auto_argparse import parse_args_and_run
 
 def func(x: int, things: List[int], y: str="test"):
     """
