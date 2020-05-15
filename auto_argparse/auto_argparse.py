@@ -11,7 +11,7 @@ def make_parser(func: Callable, add_short_args: bool = True) -> ArgumentParser:
 
     To get automatic
     * help strings: write a docstring in the same format as this one (in particular, use
-      :param param_name: help string here).
+      ":param param_name: help string here").
     * types: use type annotations (List[type] will use nargs="+")
     * defaults: just use defaults
     * required params: this is just the parameters with no default values
