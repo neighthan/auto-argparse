@@ -1,0 +1,5 @@
+*.egg[_-]info
+__pycache__
+.coverage*
+!.coveragerc
+.ipynb_checkpoints
