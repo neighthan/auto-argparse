@@ -2,6 +2,14 @@
 
 ## Install
 
+For the current release:
+
+```bash
+pip install auto-argparse
+```
+
+For the latest version from GitHub:
+
 ```bash
 pip install git+https://github.com/neighthan/auto-argparse
 ```
