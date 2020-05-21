@@ -69,3 +69,9 @@ if __name__ == "__main__":
 ```
 
 See the docstring for `auto_argparse.make_parser` for more details.
+
+## Alternatives
+
+* [`defopt`] is a more mature library which has the same aims as `auto-argparse` but with a slightly different implementation (e.g. `auto-argparse` adds short names, makes all arguments keyword-only, and puts the part of the doc string for each argument into its help string)
+
+[`defopt`]: https://github.com/anntzer/defopt
