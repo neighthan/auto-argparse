@@ -1,9 +1,16 @@
-from typing import List
+from typing import List, Optional
 
 from auto_argparse import parse_args_and_run
 
 
-def func(x: int, things: List[int], y: str = "test", z: bool = False):
+def func(
+    x: int,
+    things: List[int],
+    y: str = "test",
+    z: bool = False,
+    maybe: Optional[float] = 5,
+    maybe_not: Optional[str] = None,
+):
     """
     A very useful function.
 

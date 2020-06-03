@@ -1,7 +1,9 @@
 import inspect
 import re
 from argparse import ArgumentParser, ArgumentTypeError
-from typing import Any, Callable
+from typing import Callable, Optional, TypeVar, Union
+
+T = TypeVar("T")
 
 
 def make_parser(func: Callable, add_short_args: bool = True) -> ArgumentParser:
@@ -11,13 +13,19 @@ def make_parser(func: Callable, add_short_args: bool = True) -> ArgumentParser:
     To get automatic
     * help strings: write a docstring in the same format as this one (in particular, use
       ":param param_name: help string here").
-    * types: use type annotations
-      * `List[type]` will use nargs="+"
+    * types: use type annotations. The only supported types from `typing` are listed below.
       * `bool` uses `str2bool`; values have to be entered like `--debug True`
+      * `List[type]` will use nargs="+", type=type.
+      * `Optional[type]` converts an input `s` to None if `s.strip().lower() == "none"`.
+        Any other inputs are converted normally using `type`.
     * defaults: just use defaults
     * required params: this is just the parameters with no default values
 
     All command line arguments are configured to be "keyword only".
+
+    Except for the exceptions noted above, the type annotation will be used directly as
+    the type for the parser. This means it must be a callable which accepts a single
+    string as input and returns the desired Python object.
 
     :param func:
     :param add_short_args: if True, "-<short_name>" is used in addition to
@@ -40,15 +48,20 @@ def make_parser(func: Callable, add_short_args: bool = True) -> ArgumentParser:
 
     for i, param in enumerate(signature.parameters.values()):
         kwargs = {}
-        if getattr(param.annotation, "_name", None) == "List":  # e.g. List[int]
-            kwargs["type"] = param.annotation.__args__[0]
+        anno = param.annotation
+        origin = getattr(anno, "__origin__", None)
+        if origin == list:  # e.g. List[int]
+            kwargs["type"] = anno.__args__[0]
             kwargs["nargs"] = "+"
+        elif origin == Union:  # Optional[T] is converted to Union[T, None]
+            if len(anno.__args__) == 2 and anno.__args__[1] == type(None):
+                kwargs["type"] = make_optional(anno.__args__[0])
         else:
-            if param.annotation is not param.empty:
-                if param.annotation == bool:
+            if anno is not param.empty:
+                if anno == bool:
                     kwargs["type"] = str2bool
                 else:
-                    kwargs["type"] = param.annotation
+                    kwargs["type"] = anno
 
         if param.default is not param.empty:
             kwargs["default"] = param.default
@@ -59,7 +72,7 @@ def make_parser(func: Callable, add_short_args: bool = True) -> ArgumentParser:
             fr":param {param.name}:(.+?)(?=\n\s*:|$)", docstring, re.DOTALL
         )
         help_str = re.sub(r"\n\s*", " ", match.group(1)).strip() if match else ""
-        annotation_str = inspect.formatannotation(param.annotation)
+        annotation_str = inspect.formatannotation(anno)
         if "default" in kwargs:
             help_str += f" [{annotation_str}={kwargs['default']}]"
         else:
@@ -73,7 +86,7 @@ def make_parser(func: Callable, add_short_args: bool = True) -> ArgumentParser:
     return parser
 
 
-def parse_args_and_run(func: Callable) -> Any:
+def parse_args_and_run(func: Callable[..., T]) -> T:
     """Create a parser for `func` then execute func with the parsed arguments."""
     parser = make_parser(func)
     args = parser.parse_args()
@@ -88,3 +101,16 @@ def str2bool(v: str) -> bool:
     if v == "false":
         return False
     raise ArgumentTypeError("Boolean value expected.")
+
+
+def make_optional(type_: Callable[[str], T]) -> Callable[[str], Optional[T]]:
+    """
+    Convert `type_` into a callable which returns an instance of type T or None.
+    For an input `s`, if `s.strip().lower() == "none"` then None is returned.
+    Otherwise, `type_(s)` is returned.
+    """
+
+    def parse_to_type(cli_string: str) -> Optional[T]:
+        return None if cli_string.strip().lower() == "none" else type_(cli_string)
+
+    return parse_to_type
