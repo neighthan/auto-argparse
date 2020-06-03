@@ -39,12 +39,7 @@ def make_parser(func: Callable, add_short_args: bool = True) -> ArgumentParser:
             add_short_args = False
 
     for i, param in enumerate(signature.parameters.values()):
-        match = re.search(
-            fr":param {param.name}:(.+?)(?=\n\s*:|$)", docstring, re.DOTALL
-        )
-        help_str = re.sub(r"\n\s*", " ", match.group(1)).strip() if match else ""
-        kwargs = {"help": help_str}
-
+        kwargs = {}
         if getattr(param.annotation, "_name", None) == "List":  # e.g. List[int]
             kwargs["type"] = param.annotation.__args__[0]
             kwargs["nargs"] = "+"
@@ -59,6 +54,18 @@ def make_parser(func: Callable, add_short_args: bool = True) -> ArgumentParser:
             kwargs["default"] = param.default
         else:
             kwargs["required"] = True
+
+        match = re.search(
+            fr":param {param.name}:(.+?)(?=\n\s*:|$)", docstring, re.DOTALL
+        )
+        help_str = re.sub(r"\n\s*", " ", match.group(1)).strip() if match else ""
+        annotation_str = inspect.formatannotation(param.annotation)
+        if "default" in kwargs:
+            help_str += f" [{annotation_str}={kwargs['default']}]"
+        else:
+            help_str += f" [{annotation_str}]"
+        kwargs["help"] = help_str
+
         if add_short_args:
             parser.add_argument(f"-{short_names[i]}", f"--{param.name}", **kwargs)
         else:
