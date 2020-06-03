@@ -73,12 +73,11 @@ def parse_args_and_run(func: Callable) -> Any:
     return func(**vars(args))
 
 
-def str2bool(v):
+def str2bool(v: str) -> bool:
     """Convert a string into a Boolean value."""
-    if isinstance(v, bool):
-        return v
-    if v.lower() == "true":
+    v = v.lower().strip()
+    if v == "true":
         return True
-    if v.lower() == "false":
+    if v == "false":
         return False
     raise ArgumentTypeError("Boolean value expected.")
