@@ -44,13 +44,13 @@ def make_parser(func: Callable, add_short_args: bool = True) -> ArgumentParser:
             kwargs["type"] = param.annotation.__args__[0]
             kwargs["nargs"] = "+"
         else:
-            if param.annotation is not inspect._empty:
+            if param.annotation is not param.empty:
                 if param.annotation == bool:
                     kwargs["type"] = str2bool
                 else:
                     kwargs["type"] = param.annotation
 
-        if param.default is not inspect._empty:
+        if param.default is not param.empty:
             kwargs["default"] = param.default
         else:
             kwargs["required"] = True
