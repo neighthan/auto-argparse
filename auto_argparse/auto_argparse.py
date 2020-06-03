@@ -1,10 +1,9 @@
 import inspect
 import re
-from argparse import ArgumentParser
+from argparse import ArgumentParser, ArgumentTypeError
 from typing import Any, Callable
 
 
-# TODO: for bool params, do action="store_true"?
 def make_parser(func: Callable, add_short_args: bool = True) -> ArgumentParser:
     """
     Automatically configure an argparse parser for `func`.
@@ -12,7 +11,9 @@ def make_parser(func: Callable, add_short_args: bool = True) -> ArgumentParser:
     To get automatic
     * help strings: write a docstring in the same format as this one (in particular, use
       ":param param_name: help string here").
-    * types: use type annotations (List[type] will use nargs="+")
+    * types: use type annotations
+      * `List[type]` will use nargs="+"
+      * `bool` uses `str2bool`; values have to be entered like `--debug True`
     * defaults: just use defaults
     * required params: this is just the parameters with no default values
 
@@ -49,7 +50,10 @@ def make_parser(func: Callable, add_short_args: bool = True) -> ArgumentParser:
             kwargs["nargs"] = "+"
         else:
             if param.annotation is not inspect._empty:
-                kwargs["type"] = param.annotation
+                if param.annotation == bool:
+                    kwargs["type"] = str2bool
+                else:
+                    kwargs["type"] = param.annotation
 
         if param.default is not inspect._empty:
             kwargs["default"] = param.default
@@ -67,3 +71,14 @@ def parse_args_and_run(func: Callable) -> Any:
     parser = make_parser(func)
     args = parser.parse_args()
     return func(**vars(args))
+
+
+def str2bool(v):
+    """Convert a string into a Boolean value."""
+    if isinstance(v, bool):
+        return v
+    if v.lower() == "true":
+        return True
+    if v.lower() == "false":
+        return False
+    raise ArgumentTypeError("Boolean value expected.")
