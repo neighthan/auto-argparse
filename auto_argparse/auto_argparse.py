@@ -114,4 +114,16 @@ def make_optional(type_: Callable[[str], T]) -> Callable[[str], Optional[T]]:
     def parse_to_type(cli_string: str) -> Optional[T]:
         return None if cli_string.strip().lower() == "none" else type_(cli_string)
 
+    # If there's an error parsing the type, argparse says
+    # "invalid <type> value: <value>". Saying "invalid parse_to_type value" is
+    # confusing, so we rename the function based on the type for clarity.
+    # Handle a few special cases to make things look nicer (this way we get, e.g.,
+    # "invalid int value" instead of "invalid <class 'int'> value").
+    pretty_strings = {
+        int: "int",
+        float: "float",
+        str: "str",
+    }
+    parse_to_type.__name__ = pretty_strings.get(type_, str(type_))
+
     return parse_to_type
