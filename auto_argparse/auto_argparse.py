@@ -2,7 +2,7 @@ import inspect
 import re
 from argparse import ArgumentParser, ArgumentTypeError
 from collections.abc import Sequence
-from typing import Callable, Optional, TypeVar, Union
+from typing import Callable, TypeVar, Union
 
 T = TypeVar("T")
 
@@ -17,8 +17,8 @@ def make_parser(func: Callable, add_short_args: bool = True) -> ArgumentParser:
     * types: use type annotations. The only supported types from `typing` are listed below.
       * `bool` uses `str2bool`; values have to be entered like `--debug True`
       * `List[type]` and `Sequence[type]` will use `nargs="+", type=type`.
-      * `Optional[type]` converts an input `s` to None if `s.strip().lower() == "none"`.
-        Any other inputs are converted normally using `type`.
+      * `Optional[type]` converts inputs using `type`; a `None` is only possible if this
+        is the default value.
     * defaults: just use defaults
     * required params: this is just the parameters with no default values
 
@@ -51,12 +51,18 @@ def make_parser(func: Callable, add_short_args: bool = True) -> ArgumentParser:
         kwargs = {}
         anno = param.annotation
         origin = getattr(anno, "__origin__", None)
-        if origin == list or origin == Sequence:  # e.g. List[int]
+        if origin in (list, Sequence):  # e.g. List[int]
             kwargs["type"] = anno.__args__[0]
             kwargs["nargs"] = "+"
         elif origin == Union:  # Optional[T] is converted to Union[T, None]
             if len(anno.__args__) == 2 and anno.__args__[1] == type(None):
-                kwargs["type"] = make_optional(anno.__args__[0])
+                anno = anno.__args__[0]
+                origin = getattr(anno, "__origin__", None)
+                if origin in (list, Sequence):
+                    kwargs["nargs"] = "+"
+                    kwargs["type"] = anno.__args__[0]
+                else:
+                    kwargs["type"] = anno
         else:
             if anno is not param.empty:
                 if anno == bool:
@@ -102,28 +108,3 @@ def str2bool(v: str) -> bool:
     if v == "false":
         return False
     raise ArgumentTypeError("Boolean value expected.")
-
-
-def make_optional(type_: Callable[[str], T]) -> Callable[[str], Optional[T]]:
-    """
-    Convert `type_` into a callable which returns an instance of type T or None.
-    For an input `s`, if `s.strip().lower() == "none"` then None is returned.
-    Otherwise, `type_(s)` is returned.
-    """
-
-    def parse_to_type(cli_string: str) -> Optional[T]:
-        return None if cli_string.strip().lower() == "none" else type_(cli_string)
-
-    # If there's an error parsing the type, argparse says
-    # "invalid <type> value: <value>". Saying "invalid parse_to_type value" is
-    # confusing, so we rename the function based on the type for clarity.
-    # Handle a few special cases to make things look nicer (this way we get, e.g.,
-    # "invalid int value" instead of "invalid <class 'int'> value").
-    pretty_strings = {
-        int: "int",
-        float: "float",
-        str: "str",
-    }
-    parse_to_type.__name__ = pretty_strings.get(type_, str(type_))
-
-    return parse_to_type

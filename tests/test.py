@@ -5,7 +5,7 @@ from auto_argparse import parse_args_and_run
 
 def func(
     x: int,
-    things: Sequence[int],
+    things: Optional[Sequence[int]] = None,
     y: str = "test",
     z: bool = False,
     maybe: Optional[float] = 5,

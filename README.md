@@ -68,10 +68,21 @@ if __name__ == "__main__":
     parse_args_and_run(func)
 ```
 
-See the docstring for `auto_argparse.make_parser` for more details.
+See the docstring for [`auto_argparse.make_parser`] for more details.
+
+## Supported Types
+
+The following types should be fully supported, but any annotation `T` should work if `T(cli_string)` gives the desired value, where `cli_string` is the string entered at the command line.
+* `int`
+* `float`
+* `str`
+* `bool`
+* `List[T]`, `Sequence[T]` where `T` is any of (`int`, `float`, `str`) or as described in the paragraph above
+* `Optional[T]` where `T` could additionally be `List` or `Sequence`. Note that there's no way to explicitly enter a `None` value from the command-line though it can be the default value.
 
 ## Alternatives
 
 * [`defopt`] is a more mature library which has the same aims as `auto-argparse` but with a slightly different implementation (e.g. `auto-argparse` adds short names, makes all arguments keyword-only, and puts the part of the doc string for each argument into its help string)
 
+[`auto_argparse.make_parser`]: auto_argparse/auto_argparse.py
 [`defopt`]: https://github.com/anntzer/defopt
