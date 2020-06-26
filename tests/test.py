@@ -1,11 +1,11 @@
-from typing import List, Optional
+from typing import Optional, Sequence
 
 from auto_argparse import parse_args_and_run
 
 
 def func(
     x: int,
-    things: List[int],
+    things: Sequence[int],
     y: str = "test",
     z: bool = False,
     maybe: Optional[float] = 5,

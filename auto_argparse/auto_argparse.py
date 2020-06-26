@@ -1,6 +1,7 @@
 import inspect
 import re
 from argparse import ArgumentParser, ArgumentTypeError
+from collections.abc import Sequence
 from typing import Callable, Optional, TypeVar, Union
 
 T = TypeVar("T")
@@ -15,7 +16,7 @@ def make_parser(func: Callable, add_short_args: bool = True) -> ArgumentParser:
       ":param param_name: help string here").
     * types: use type annotations. The only supported types from `typing` are listed below.
       * `bool` uses `str2bool`; values have to be entered like `--debug True`
-      * `List[type]` will use nargs="+", type=type.
+      * `List[type]` and `Sequence[type]` will use `nargs="+", type=type`.
       * `Optional[type]` converts an input `s` to None if `s.strip().lower() == "none"`.
         Any other inputs are converted normally using `type`.
     * defaults: just use defaults
@@ -50,7 +51,7 @@ def make_parser(func: Callable, add_short_args: bool = True) -> ArgumentParser:
         kwargs = {}
         anno = param.annotation
         origin = getattr(anno, "__origin__", None)
-        if origin == list:  # e.g. List[int]
+        if origin == list or origin == Sequence:  # e.g. List[int]
             kwargs["type"] = anno.__args__[0]
             kwargs["nargs"] = "+"
         elif origin == Union:  # Optional[T] is converted to Union[T, None]
