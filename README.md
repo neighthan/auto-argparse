@@ -1,5 +1,7 @@
 # auto-argparse
 
+[![PyPI version](https://badge.fury.io/py/auto-argparse.svg)](https://badge.fury.io/py/auto-argparse)
+
 ## Install
 
 For the current release:
