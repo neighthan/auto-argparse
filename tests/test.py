@@ -11,7 +11,7 @@ def func(
     z: bool = False,
     maybe: Optional[float] = 5,
     maybe_not: Optional[str] = None,
-    any_dict: Dict[str, int] = None,
+    any_dict: Optional[Dict[str, int]] = None,
 ):
     """
     A very useful function.

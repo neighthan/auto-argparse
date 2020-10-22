@@ -73,6 +73,12 @@ def make_parser(
                 if origin in (list, Sequence):
                     kwargs["nargs"] = "+"
                     kwargs["type"] = anno.__args__[0]
+                elif origin == dict:
+                    key_type, val_type = anno.__args__
+                    dict_type = make_dict_type(key_type, val_type, validate_dict_types)
+                    kwargs["type"] = dict_type
+                elif anno == bool:
+                    kwargs["type"] = str2bool
                 else:
                     kwargs["type"] = anno
         elif origin == dict:
