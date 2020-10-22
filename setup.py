@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="auto_argparse",
-    version="0.0.6",
+    version="0.0.7",
     url="https://github.com/neighthan/auto-argparse",
     author="Nathan Hunt",
     author_email="neighthan.hunt@gmail.com",
