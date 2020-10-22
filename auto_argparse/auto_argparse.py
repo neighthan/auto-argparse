@@ -1,13 +1,16 @@
 import inspect
+import json
 import re
 from argparse import ArgumentParser, ArgumentTypeError
 from collections.abc import Sequence
-from typing import Callable, TypeVar, Union
+from typing import Any, Callable, Dict, TypeVar, Union
 
 T = TypeVar("T")
 
 
-def make_parser(func: Callable, add_short_args: bool = True) -> ArgumentParser:
+def make_parser(
+    func: Callable, add_short_args: bool = True, validate_dict_types: bool = False
+) -> ArgumentParser:
     """
     Automatically configure an argparse parser for `func`.
 
@@ -15,10 +18,17 @@ def make_parser(func: Callable, add_short_args: bool = True) -> ArgumentParser:
     * help strings: write a docstring in the same format as this one (in particular, use
       ":param param_name: help string here").
     * types: use type annotations. The only supported types from `typing` are listed below.
-      * `bool` uses `str2bool`; values have to be entered like `--debug True`
       * `List[type]` and `Sequence[type]` will use `nargs="+", type=type`.
       * `Optional[type]` converts inputs using `type`; a `None` is only possible if this
         is the default value.
+      * `Dict[key_type, val_type]` uses `json.loads` or, if the input doesn't parse as
+        JSON and it's available, `yaml.safe_load` to parse the input. If the parsed
+        value is not a dictionary, an `ArgumentTypeError` is thrown. Tips:
+          * quote the dictionary argument on the command line
+          * JSON: use double-quotes around all strings (`-p '{"key": "val"}'`)
+          * JSON: keys must be strings
+          * YAML: put spaces between keys and values (`-p "{key: val}"` NOT `-p "{key:val}"`)
+      * `bool` uses `str2bool`; values have to be entered like `--debug True`
     * defaults: just use defaults
     * required params: this is just the parameters with no default values
 
@@ -33,6 +43,8 @@ def make_parser(func: Callable, add_short_args: bool = True) -> ArgumentParser:
       "--<param_name>". The short names are created by taking the first character of
       each _-delimited substring (e.g. "my_arg" -> "ma"). If multiple short names would
       be the same, none are used.
+    :param validate_dict_types: if True, `ArgumentTypeError` is thrown if any dictionary
+      keys / values aren't of the proper type.
     """
     docstring = func.__doc__ or ""
     match = re.search(r"(.*?)(?=\n\s*:|$)", docstring, re.DOTALL)
@@ -63,6 +75,10 @@ def make_parser(func: Callable, add_short_args: bool = True) -> ArgumentParser:
                     kwargs["type"] = anno.__args__[0]
                 else:
                     kwargs["type"] = anno
+        elif origin == dict:
+            key_type, val_type = anno.__args__
+            dict_type = make_dict_type(key_type, val_type, validate_dict_types)
+            kwargs["type"] = dict_type
         else:
             if anno is not param.empty:
                 if anno == bool:
@@ -108,3 +124,34 @@ def str2bool(v: str) -> bool:
     if v == "false":
         return False
     raise ArgumentTypeError("Boolean value expected.")
+
+
+def make_dict_type(key_type, val_type, validate_types: bool = False):
+    """
+    :rtype: Callable[[str], Dict[key_type, val_type]]
+    """
+
+    def dict_type(inp: str) -> Dict[key_type, val_type]:
+        try:
+            d = json.loads(inp)
+        except json.JSONDecodeError:
+            try:
+                import yaml
+            except ImportError:
+                raise ArgumentTypeError()
+            d = yaml.safe_load(inp)
+        if not isinstance(d, dict):
+            raise ArgumentTypeError("Input did not parse as a dictionary.")
+        if validate_types:
+            for k, v in d.items():
+                if not isinstance(k, key_type):
+                    raise ArgumentTypeError(
+                        f"Key {k} is not of expected type {key_type}."
+                    )
+                if not isinstance(v, val_type):
+                    raise ArgumentTypeError(
+                        f"Value {v} is not of expected type {val_type}."
+                    )
+        return d
+
+    return dict_type

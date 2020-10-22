@@ -1,6 +1,7 @@
-from typing import Optional, Sequence
+import shlex
+from typing import Dict, Optional, Sequence
 
-from auto_argparse import parse_args_and_run
+from auto_argparse import make_parser, parse_args_and_run
 
 
 def func(
@@ -10,6 +11,7 @@ def func(
     z: bool = False,
     maybe: Optional[float] = 5,
     maybe_not: Optional[str] = None,
+    any_dict: Dict[str, int] = None,
 ):
     """
     A very useful function.
@@ -20,6 +22,14 @@ def func(
     :param y: the last param
     """
     print(locals())
+
+
+def test_func():
+    parser = make_parser(func)
+    inp = shlex.split("-x 1 -ad '{1: 2}'")
+    args = vars(parser.parse_args(inp))
+    assert args["x"] == 1
+    assert args["any_dict"] == {1: 2}
 
 
 if __name__ == "__main__":
