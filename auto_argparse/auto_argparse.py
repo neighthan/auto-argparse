@@ -117,9 +117,20 @@ def make_parser(
 
 def parse_args_and_run(func: Callable[..., T]) -> T:
     """Create a parser for `func` then execute func with the parsed arguments."""
-    parser = make_parser(func)
-    args = parser.parse_args()
-    return func(**vars(args))
+    return parse_args_and_run_dec(func)()
+
+
+def parse_args_and_run_dec(func: Callable[..., T]) -> Callable[[], T]:
+    """
+    Return a wrapper which executes `func` with parsed arguments.
+
+    This is can be used as a decorator on functions that take CLI args.
+    """
+    def wrapper():
+        parser = make_parser(func)
+        args = parser.parse_args()
+        return func(**vars(args))
+    return wrapper
 
 
 def str2bool(v: str) -> bool:
