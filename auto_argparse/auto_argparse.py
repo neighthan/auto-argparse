@@ -2,6 +2,7 @@ import inspect
 import json
 import re
 from argparse import ArgumentParser, ArgumentTypeError
+from collections import Counter
 from collections.abc import Sequence
 from typing import Any, Callable, Dict, TypeVar, Union
 
@@ -41,8 +42,8 @@ def make_parser(
     :param func:
     :param add_short_args: if True, "-<short_name>" is used in addition to
       "--<param_name>". The short names are created by taking the first character of
-      each _-delimited substring (e.g. "my_arg" -> "ma"). If multiple short names would
-      be the same, none are used.
+      each _-delimited substring (e.g. "my_arg" -> "ma"). Short names are skipped for any
+      args that have the same short name.
     :param validate_dict_types: if True, `ArgumentTypeError` is thrown if any dictionary
       keys / values aren't of the proper type.
     """
@@ -56,8 +57,7 @@ def make_parser(
     if add_short_args:
         names = signature.parameters.keys()
         short_names = ["".join(s[0] for s in name.split("_")) for name in names]
-        if len(set(short_names)) != len(short_names):  # name conflicts
-            add_short_args = False
+        short_name_counts = Counter(short_names)
 
     for i, param in enumerate(signature.parameters.values()):
         kwargs = {}
@@ -109,7 +109,12 @@ def make_parser(
         kwargs["help"] = help_str
 
         if add_short_args:
-            parser.add_argument(f"-{short_names[i]}", f"--{param.name}", **kwargs)
+            short_name = short_names[i]
+            # can't use duplicated short names
+            if short_name_counts[short_name] == 1:
+                parser.add_argument(f"-{short_name}", f"--{param.name}", **kwargs)
+            else:
+                parser.add_argument(f"--{param.name}", **kwargs)
         else:
             parser.add_argument(f"--{param.name}", **kwargs)
     return parser
